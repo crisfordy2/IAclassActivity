@@ -13,16 +13,13 @@ from sklearn.metrics import classification_report, roc_curve
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 
-
 simplefilter(action='ignore', category=FutureWarning)
 
-#importar data set
 url = 'diabetes.csv'
 data = pd.read_csv(url)
 
 
 def modelTraining(model, train_x, x_test, y_train, y_test):
-    # metricas de entrenamiento
     constante_fold = KFold(n_splits=10)
     cvscores = []
     for train, test in constante_fold.split(train_x, y_train):
@@ -35,8 +32,7 @@ def modelTraining(model, train_x, x_test, y_train, y_test):
     return model, accuracy_validation, accuracy_test, y_pred
 
 
-def mca(model, x_test, y_test, y_pred):
-    # matriz de confusion auc
+def modelCA(model, x_test, y_test, y_pred):
     matriz_confusion = confusion_matrix(y_test, y_pred)
     probs = model.predict_proba(x_test)
     probs = probs[:, 1]
@@ -45,7 +41,6 @@ def mca(model, x_test, y_test, y_pred):
 
 
 def fpr_tpr(model, x_test, y_test):
-    # matriz de fpr y tpr
     probs = model.predict_proba(x_test)
     probs = probs[:, 1]
     fpr, tpr, _ = roc_curve(y_test, probs)
@@ -53,7 +48,6 @@ def fpr_tpr(model, x_test, y_test):
 
 
 def show_roc_hot(matriz_confusion):
-    # show hot plot ROC
     for i in range(len(matriz_confusion)):
         sns.heatmap(matriz_confusion[i])
     plt.show()
@@ -61,11 +55,8 @@ def show_roc_hot(matriz_confusion):
 
 def show_roc_curve_matrix(model, x_test, y_test):
     colors = ['orange', 'blue', 'yellow', 'green', 'red', 'silver']
-    # show plot ROC
     for i in range(len(model)):
         fpr, tpr = fpr_tpr(model[i], x_test, y_test)
-        # sns.heatmap(matriz_confusion)
-        # plt.show()
         plt.plot(fpr, tpr, color=colors[i], label='ROC')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
@@ -112,12 +103,7 @@ def classifier_int(columns):
         data[column] = pd.cut(data[column], rangos, labels=text)
 
 
-
-
-# manejo de datos
 data.Outcome.value_counts(dropna=False)
-
-# Volver categoricos los datos
 
 classifier_int(['Glucose', 'BloodPressure', 'SkinThickness',
                 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age'])
@@ -127,10 +113,8 @@ data.dropna(axis=0, how='any', inplace=True)
 x = np.array(data.drop(['Outcome'], 1))
 y = np.array(data.Outcome)  # 0 sin diabetes, 1 con diabetes
 
-# train_x, x_test, y_train, y_test
 x_tr, x_te, y_tr, y_te = train_test_split(x, y, test_size=0.2)
 
-# metricas
 model_name = ['LOGISTIC REGRESSION', 'DECISION TREE', 'KNEIGHBORNS',
               'RANDOM FOREST CLASSIFIER', 'GRADIENT BOOSTING CLASSIFIER']
 
@@ -141,9 +125,9 @@ model = [LogisticRegression(), DecisionTreeClassifier(),
          GradientBoostingClassifier()]
 
 for i in range(len(model_name)):
-    # model, acc_validation, acc_test, y_pred
-    model[i], vacc_va, vacc_te, y_pr = modelTraining(model[i], x_tr, x_te, y_tr, y_te)
-    matriz_confusion, vauc = mca(model[i], x_te, y_te, y_pr)
+    model[i], vacc_va, vacc_te, y_pr = modelTraining(
+        model[i], x_tr, x_te, y_tr, y_te)
+    matriz_confusion, vauc = modelCA(model[i], x_te, y_te, y_pr)
     # valores de la matriz de confusion
     recall[i] = recall_score(y_te, y_pr)
     precision[i] = precision_score(y_te, y_pr)
@@ -151,11 +135,13 @@ for i in range(len(model_name)):
     auc[i] = vauc
     acc_va[i] = vacc_va
     acc_te[i] = vacc_te
-    # matriz de confusion
     matriz_confu[i] = matriz_confusion
 
+print("################## Regresión logística ##################")
 tabla = panda_values([acc_va, acc_va, acc_te, recall, precision, f1, auc])
 view_matriz_confusion(matriz_confu)
 show_roc_hot(matriz_confu)
 print(tabla)
+
+print("########################### Models ###############################")
 show_roc_curve_matrix(model, x_te, y_te)
